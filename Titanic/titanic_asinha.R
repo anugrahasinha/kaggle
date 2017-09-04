@@ -35,18 +35,57 @@ titanic_test_base <- read.csv("test.csv",stringsAsFactors = F)
   ggplot(titanic_train %>% filter(!is.na(Age))) + geom_boxplot(aes(x=Sex,y=Age))
   titanic_train %>% group_by(Sex) %>% summarize(medianAge = median(Age,na.rm=TRUE),meanAge=mean(Age,na.rm=TRUE))
 
-  # For men lets impute Age = NA as -> mean(Age) of men
-  # For Women lets impute Age = NA -> mean(Age) of women
+  # Tring to see if WOE has some inference for Age #
+  
+  woe.df <- woe(Data=titanic_temp_train,
+                Independent = "Age",
+                Continuous = TRUE,
+                Dependent = "Survived",
+                Good=1,
+                Bad=0,
+                C_Bin=3)
+  ggplot(woe.df) + geom_line(aes(x=BIN,y=WOE))
+  woe.df
+  sum(woe.df$IV)
+  
+  #The monotonous nature of WOE is only available in 2 bins, with WOE as -5 & +5. Not very interesting.
+  #Not going with WOE analysis#
+  
+  # Lets see the mean & median age of Men and Women
+  titanic_train %>% 
+    filter(!is.na(Age)) %>% 
+    group_by(Sex) %>% 
+    summarize(cnt=length(PassengerId),avg=mean(Age),med=median(Age)) %>% 
+    mutate(perc=cnt/sum(cnt))
+  
+  # Percentage distribution between male and female for NAs of Age #
+  titanic_train %>% 
+    filter(is.na(Age)) %>% 
+    group_by(Sex) %>% 
+    summarize(cnt=length(PassengerId)) %>% 
+    mutate(perc=cnt/sum(cnt))
+  
+  # For men lets impute Age = NA as -> median(Age) of men
+  # For Women lets impute Age = NA -> median(Age) of women
   # we do not see a NA pattern here
 
   titanic_train$Age[which(is.na(titanic_train$Age) & titanic_train$Sex == "male")] <- 
     (titanic_train %>% group_by(Sex) %>% summarize(medianAge = median(Age,na.rm=TRUE),meanAge=mean(Age,na.rm=TRUE)) %>% 
-    filter(Sex=="male"))$meanAge
+    filter(Sex=="male"))$medianAge
 
   titanic_train$Age[which(is.na(titanic_train$Age) & titanic_train$Sex == "female")] <- 
     (titanic_train %>% group_by(Sex) %>% summarize(medianAge = median(Age,na.rm=TRUE),meanAge=mean(Age,na.rm=TRUE)) %>% 
-    filter(Sex=="female"))$meanAge
+    filter(Sex=="female"))$medianAge
 
+  # Now lets see the distribution once again #
+  titanic_train %>% 
+    filter(!is.na(Age)) %>% 
+    group_by(Sex) %>% 
+    summarize(cnt=length(PassengerId),avg=mean(Age),med=median(Age)) %>% 
+    mutate(perc=cnt/sum(cnt))
+  
+  # The distribution looks now pretty similar as to what it was earlier, so we are good here!
+  
   sapply(titanic_train,function(x) sum(is.na(x)))
   ## No more NAs now ##
 
